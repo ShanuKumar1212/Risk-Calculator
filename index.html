@@ -51,6 +51,33 @@ h1 {
     font-size: 17px;
 }
 
+.trade-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+.trade-selector button {
+    margin: 0;
+    padding: 14px;
+    background: #0b1220;
+    border: 1px solid #334155;
+    color: #94a3b8;
+}
+
+.trade-selector button.active.buy {
+    background: #14532d;
+    border-color: #22c55e;
+    color: #4ade80;
+}
+
+.trade-selector button.active.sell {
+    background: #7f1d1d;
+    border-color: #ef4444;
+    color: #f87171;
+}
+
 .inputs {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -81,18 +108,21 @@ h1 {
 
 button {
     width: 100%;
-    margin-top: 25px;
     padding: 14px;
-    background: #0284c7;
     border: none;
     border-radius: 8px;
-    color: white;
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
 }
 
-button:hover {
+.calculate-btn {
+    margin-top: 25px;
+    background: #0284c7;
+    color: white;
+}
+
+.calculate-btn:hover {
     background: #0369a1;
 }
 
@@ -122,17 +152,9 @@ button:hover {
     overflow-wrap: anywhere;
 }
 
-.green {
-    color: #22c55e !important;
-}
-
-.red {
-    color: #ef4444 !important;
-}
-
-.blue {
-    color: #38bdf8 !important;
-}
+.green { color: #22c55e !important; }
+.red { color: #ef4444 !important; }
+.blue { color: #38bdf8 !important; }
 
 .error {
     color: #f87171;
@@ -168,38 +190,58 @@ button:hover {
     <h1>Trade Risk Calculator</h1>
 
     <p class="subtitle">
-        Calculate your position size and potential reward.
+        Calculate quantity, profit, loss and risk-to-reward.
     </p>
 
     <div class="calculator">
+
+        <h3 class="section-title">Select Trade Type</h3>
+
+        <div class="trade-selector">
+            <button id="buyBtn" class="active buy"
+                onclick="setTradeType('BUY')">
+                BUY / LONG
+            </button>
+
+            <button id="sellBtn"
+                onclick="setTradeType('SELL')">
+                SELL / SHORT
+            </button>
+        </div>
 
         <h3 class="section-title">Trade Inputs</h3>
 
         <div class="inputs">
 
             <div class="field">
-                <label>Buy Price (₹)</label>
-                <input type="number" id="buy" placeholder="250" step="any">
+                <label id="priceLabel">Buy Price (₹)</label>
+                <input type="number" id="price"
+                    placeholder="250" step="any">
             </div>
 
             <div class="field">
                 <label>Stop Loss (₹)</label>
-                <input type="number" id="sl" placeholder="240" step="any">
+                <input type="number" id="sl"
+                    placeholder="240" step="any">
             </div>
 
             <div class="field">
                 <label>Target Price (₹)</label>
-                <input type="number" id="target" placeholder="280" step="any">
+                <input type="number" id="target"
+                    placeholder="280" step="any">
             </div>
 
             <div class="field">
                 <label>Maximum Loss Per Trade (₹)</label>
-                <input type="number" id="maxLoss" placeholder="1000" step="any">
+                <input type="number" id="maxLoss"
+                    placeholder="1000" step="any">
             </div>
 
         </div>
 
-        <button onclick="calculate()">Calculate Trade</button>
+        <button class="calculate-btn" onclick="calculate()">
+            Calculate Trade
+        </button>
 
         <p class="error" id="error"></p>
 
@@ -232,18 +274,60 @@ button:hover {
         </div>
 
         <div class="summary" id="summary">
-            Enter trade details to calculate your position.
+            Select trade type and enter your trade details.
         </div>
 
     </div>
-
 </div>
 
 <script>
 
+let tradeType = "BUY";
+
+function setTradeType(type) {
+
+    tradeType = type;
+
+    const buyBtn = document.getElementById("buyBtn");
+    const sellBtn = document.getElementById("sellBtn");
+
+    buyBtn.className = type === "BUY"
+        ? "active buy" : "";
+
+    sellBtn.className = type === "SELL"
+        ? "active sell" : "";
+
+    document.getElementById("priceLabel").textContent =
+        type === "BUY" ? "Buy Price (₹)" : "Sell Price (₹)";
+
+    document.getElementById("price").placeholder =
+        type === "BUY" ? "250" : "250";
+
+    document.getElementById("sl").placeholder =
+        type === "BUY" ? "240" : "260";
+
+    document.getElementById("target").placeholder =
+        type === "BUY" ? "280" : "220";
+
+    document.getElementById("error").textContent = "";
+
+    resetResults();
+}
+
+function resetResults() {
+
+    document.getElementById("quantity").textContent = "--";
+    document.getElementById("profit").textContent = "--";
+    document.getElementById("loss").textContent = "--";
+    document.getElementById("ratio").textContent = "--";
+
+    document.getElementById("summary").textContent =
+        "Enter trade details to calculate your position.";
+}
+
 function calculate() {
 
-    const buy = Number(document.getElementById("buy").value);
+    const price = Number(document.getElementById("price").value);
     const sl = Number(document.getElementById("sl").value);
     const target = Number(document.getElementById("target").value);
     const maxLoss = Number(document.getElementById("maxLoss").value);
@@ -252,41 +336,67 @@ function calculate() {
     error.textContent = "";
 
     if (
-        ![buy, sl, target, maxLoss].every(Number.isFinite) ||
-        buy <= 0 || sl <= 0 || target <= 0 || maxLoss <= 0
+        ![price, sl, target, maxLoss].every(Number.isFinite) ||
+        price <= 0 || sl <= 0 || target <= 0 || maxLoss <= 0
     ) {
         error.textContent = "Please enter valid positive values.";
         return;
     }
 
-    if (sl >= buy) {
-        error.textContent = "Stop loss must be below buy price.";
-        return;
+    let riskPerShare;
+    let rewardPerShare;
+
+    if (tradeType === "BUY") {
+
+        // BUY: Stop loss below entry, target above entry
+        if (sl >= price) {
+            error.textContent =
+                "For BUY, stop loss must be below buy price.";
+            return;
+        }
+
+        if (target <= price) {
+            error.textContent =
+                "For BUY, target must be above buy price.";
+            return;
+        }
+
+        riskPerShare = price - sl;
+        rewardPerShare = target - price;
+
+    } else {
+
+        // SELL: Stop loss above entry, target below entry
+        if (sl <= price) {
+            error.textContent =
+                "For SELL, stop loss must be above sell price.";
+            return;
+        }
+
+        if (target >= price) {
+            error.textContent =
+                "For SELL, target must be below sell price.";
+            return;
+        }
+
+        riskPerShare = sl - price;
+        rewardPerShare = price - target;
     }
 
-    if (target <= buy) {
-        error.textContent = "Target must be above buy price.";
-        return;
-    }
-
-    // Risk and reward per share
-    const riskPerShare = buy - sl;
-    const rewardPerShare = target - buy;
-
-    // Calculate quantity based on maximum acceptable loss
+    // Calculate share quantity
     const quantity = Math.floor(maxLoss / riskPerShare);
 
     if (quantity < 1) {
         error.textContent =
-            "Maximum loss amount is too small to buy even one share.";
+            "Maximum loss is too small for even one share.";
         return;
     }
 
-    // Actual profit and loss based on whole shares
+    // Calculate actual profit and loss
     const actualLoss = quantity * riskPerShare;
     const profit = quantity * rewardPerShare;
 
-    // Risk reward ratio
+    // Risk-to-reward ratio
     const ratio = rewardPerShare / riskPerShare;
 
     const format = value =>
@@ -294,7 +404,7 @@ function calculate() {
             maximumFractionDigits: 2
         });
 
-    // Display outputs
+    // Display results
     document.getElementById("quantity").textContent = quantity;
 
     document.getElementById("profit").textContent =
@@ -306,11 +416,12 @@ function calculate() {
     document.getElementById("ratio").textContent =
         "1 : " + ratio.toFixed(2);
 
-    // Summary
+    // Trade summary
     document.getElementById("summary").innerHTML = `
-        <strong>TRADE ANALYSIS</strong><br>
 
-        Buy Price: ${format(buy)}<br>
+        <strong>${tradeType} TRADE ANALYSIS</strong><br>
+
+        Entry Price: ${format(price)}<br>
 
         Stop Loss: ${format(sl)}<br>
 
@@ -322,7 +433,7 @@ function calculate() {
 
         Quantity: <strong>${quantity} shares</strong><br>
 
-        Actual Maximum Loss:
+        Maximum Loss:
         <strong style="color:#ef4444">${format(actualLoss)}</strong><br>
 
         Potential Profit:
@@ -330,6 +441,7 @@ function calculate() {
 
         Risk-to-Reward:
         <strong>1 : ${ratio.toFixed(2)}</strong>
+
     `;
 }
 
