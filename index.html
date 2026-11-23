@@ -26,6 +26,36 @@ body {
     margin: auto;
 }
 
+/* TOP NAVIGATION */
+
+.top-nav {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 25px;
+}
+
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #151e30;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #38bdf8;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+.nav-link:hover {
+    background: #1e293b;
+    border-color: #38bdf8;
+}
+
+/* HEADER */
+
 h1 {
     text-align: center;
     color: #f8fafc;
@@ -51,6 +81,8 @@ h1 {
     font-size: 17px;
 }
 
+/* TRADE SELECTOR */
+
 .trade-selector {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -64,6 +96,9 @@ h1 {
     background: #0b1220;
     border: 1px solid #334155;
     color: #94a3b8;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
 .trade-selector button.active.buy {
@@ -77,6 +112,8 @@ h1 {
     border-color: #ef4444;
     color: #f87171;
 }
+
+/* INPUTS */
 
 .inputs {
     display: grid;
@@ -126,6 +163,8 @@ button {
     background: #0369a1;
 }
 
+/* RESULTS */
+
 .results {
     margin-top: 25px;
     display: grid;
@@ -152,9 +191,17 @@ button {
     overflow-wrap: anywhere;
 }
 
-.green { color: #22c55e !important; }
-.red { color: #ef4444 !important; }
-.blue { color: #38bdf8 !important; }
+.green {
+    color: #22c55e !important;
+}
+
+.red {
+    color: #ef4444 !important;
+}
+
+.blue {
+    color: #38bdf8 !important;
+}
 
 .error {
     color: #f87171;
@@ -171,6 +218,8 @@ button {
     color: #cbd5e1;
 }
 
+/* MOBILE */
+
 @media(max-width: 550px) {
     .inputs, .results {
         grid-template-columns: 1fr;
@@ -179,6 +228,10 @@ button {
     .calculator {
         padding: 18px;
     }
+
+    .top-nav {
+        margin-bottom: 20px;
+    }
 }
 </style>
 </head>
@@ -186,6 +239,19 @@ button {
 <body>
 
 <div class="container">
+
+    <!-- TOP RIGHT NAVIGATION -->
+
+    <div class="top-nav">
+        <a
+            href="https://script.google.com/macros/s/AKfycbzJZQJy6w0558sp8gam3V87cltzr2MsVdcmiM66-5jK1jMZQvMoVb7ZKLvi13VjewMBnw/exec"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="nav-link"
+        >
+            📒 Notebook ↗
+        </a>
+    </div>
 
     <h1>Trade Risk Calculator</h1>
 
@@ -198,7 +264,9 @@ button {
         <h3 class="section-title">Select Trade Type</h3>
 
         <div class="trade-selector">
-            <button id="buyBtn" class="active buy"
+
+            <button id="buyBtn"
+                class="active buy"
                 onclick="setTradeType('BUY')">
                 BUY / LONG
             </button>
@@ -207,6 +275,7 @@ button {
                 onclick="setTradeType('SELL')">
                 SELL / SHORT
             </button>
+
         </div>
 
         <h3 class="section-title">Trade Inputs</h3>
@@ -278,6 +347,7 @@ button {
         </div>
 
     </div>
+
 </div>
 
 <script>
@@ -300,8 +370,7 @@ function setTradeType(type) {
     document.getElementById("priceLabel").textContent =
         type === "BUY" ? "Buy Price (₹)" : "Sell Price (₹)";
 
-    document.getElementById("price").placeholder =
-        type === "BUY" ? "250" : "250";
+    document.getElementById("price").placeholder = "250";
 
     document.getElementById("sl").placeholder =
         type === "BUY" ? "240" : "260";
@@ -348,7 +417,6 @@ function calculate() {
 
     if (tradeType === "BUY") {
 
-        // BUY: Stop loss below entry, target above entry
         if (sl >= price) {
             error.textContent =
                 "For BUY, stop loss must be below buy price.";
@@ -366,7 +434,6 @@ function calculate() {
 
     } else {
 
-        // SELL: Stop loss above entry, target below entry
         if (sl <= price) {
             error.textContent =
                 "For SELL, stop loss must be above sell price.";
@@ -383,20 +450,17 @@ function calculate() {
         rewardPerShare = price - target;
     }
 
-    // Calculate share quantity
     const quantity = Math.floor(maxLoss / riskPerShare);
 
     if (quantity < 1) {
         error.textContent =
             "Maximum loss is too small for even one share.";
+        resetResults();
         return;
     }
 
-    // Calculate actual profit and loss
     const actualLoss = quantity * riskPerShare;
     const profit = quantity * rewardPerShare;
-
-    // Risk-to-reward ratio
     const ratio = rewardPerShare / riskPerShare;
 
     const format = value =>
@@ -404,7 +468,6 @@ function calculate() {
             maximumFractionDigits: 2
         });
 
-    // Display results
     document.getElementById("quantity").textContent = quantity;
 
     document.getElementById("profit").textContent =
@@ -416,7 +479,6 @@ function calculate() {
     document.getElementById("ratio").textContent =
         "1 : " + ratio.toFixed(2);
 
-    // Trade summary
     document.getElementById("summary").innerHTML = `
 
         <strong>${tradeType} TRADE ANALYSIS</strong><br>
